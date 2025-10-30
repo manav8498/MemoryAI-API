@@ -84,3 +84,4 @@ secrets.json
 
 # BFG Repo Cleaner
 .bfg-report/
+..bfg-report/
