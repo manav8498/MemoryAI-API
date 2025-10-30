@@ -1,0 +1,17 @@
+MANIFEST.in
+README.md
+pyproject.toml
+setup.py
+memory_ai/__init__.py
+memory_ai/client.py
+memory_ai/exceptions.py
+memory_ai/resources.py
+memory_ai_sdk/__init__.py
+memory_ai_sdk/client.py
+memory_ai_sdk/exceptions.py
+memory_ai_sdk/resources.py
+memory_ai_sdk.egg-info/PKG-INFO
+memory_ai_sdk.egg-info/SOURCES.txt
+memory_ai_sdk.egg-info/dependency_links.txt
+memory_ai_sdk.egg-info/requires.txt
+memory_ai_sdk.egg-info/top_level.txt

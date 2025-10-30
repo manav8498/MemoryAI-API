@@ -1,0 +1,207 @@
+# =============================================================================
+# AI MEMORY API - PYTHON DEPENDENCIES
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# WEB FRAMEWORK
+# -----------------------------------------------------------------------------
+fastapi[all]==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-multipart==0.0.6
+
+# -----------------------------------------------------------------------------
+# ASYNC & CONCURRENCY
+# -----------------------------------------------------------------------------
+aiohttp==3.9.1
+httpx==0.26.0
+aiokafka==0.10.0
+
+# -----------------------------------------------------------------------------
+# DATABASES
+# -----------------------------------------------------------------------------
+# PostgreSQL
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# Redis
+redis==5.0.1
+aioredis==2.0.1
+
+# Milvus Vector DB
+pymilvus==2.3.5
+
+# Neo4j Graph DB
+neo4j==5.16.0
+
+# -----------------------------------------------------------------------------
+# MACHINE LEARNING & AI
+# -----------------------------------------------------------------------------
+# Core ML
+torch==2.1.2
+transformers==4.36.2
+sentence-transformers==2.3.1
+huggingface-hub==0.20.2
+
+# OpenAI
+openai==1.10.0
+
+# Google Gemini
+google-generativeai==0.3.2
+
+# Anthropic Claude
+anthropic==0.8.1
+
+# LangChain Integration
+langchain==0.1.4
+langchain-core==0.1.16
+langchain-community==0.0.16
+
+# Embeddings
+faiss-cpu==1.7.4  # For local similarity search
+rank-bm25==0.2.2  # For BM25 sparse search
+
+# NLP
+spacy==3.7.2
+nltk==3.8.1
+
+# -----------------------------------------------------------------------------
+# REINFORCEMENT LEARNING
+# -----------------------------------------------------------------------------
+ray[default]==2.9.1
+ray[serve]==2.9.1
+gym==0.26.2
+stable-baselines3==2.2.1  # RL algorithms (PPO reference implementation)
+gymnasium==0.29.1  # Updated gym API
+
+# -----------------------------------------------------------------------------
+# DATA PROCESSING
+# -----------------------------------------------------------------------------
+numpy==1.26.3
+pandas==2.1.4
+pyarrow==14.0.2  # For Parquet
+polars==0.20.3  # Fast dataframes
+
+# -----------------------------------------------------------------------------
+# MESSAGE QUEUE
+# -----------------------------------------------------------------------------
+confluent-kafka==2.3.0
+kafka-python==2.0.2
+
+# -----------------------------------------------------------------------------
+# OBJECT STORAGE
+# -----------------------------------------------------------------------------
+boto3==1.34.28  # AWS S3
+minio==7.2.3  # MinIO (S3-compatible)
+
+# -----------------------------------------------------------------------------
+# OBSERVABILITY
+# -----------------------------------------------------------------------------
+# Logging
+loguru==0.7.2
+python-json-logger==2.0.7
+
+# Metrics
+prometheus-client==0.19.0
+prometheus-fastapi-instrumentator==6.1.0
+
+# Tracing
+opentelemetry-api==1.22.0
+opentelemetry-sdk==1.22.0
+opentelemetry-instrumentation-fastapi==0.43b0
+opentelemetry-exporter-jaeger==1.21.0
+
+# Error Tracking
+sentry-sdk[fastapi]==1.39.2
+
+# -----------------------------------------------------------------------------
+# AUTHENTICATION & SECURITY
+# -----------------------------------------------------------------------------
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+cryptography==42.0.0
+
+# -----------------------------------------------------------------------------
+# VALIDATION & SERIALIZATION
+# -----------------------------------------------------------------------------
+pydantic==2.5.3
+email-validator==2.1.0
+phonenumbers==8.13.27
+
+# -----------------------------------------------------------------------------
+# UTILITIES
+# -----------------------------------------------------------------------------
+python-dotenv==1.0.0
+python-dateutil==2.8.2
+pytz==2023.3.post1
+tenacity==8.2.3  # Retry logic
+cachetools==5.3.2  # Caching utilities
+
+# -----------------------------------------------------------------------------
+# HTTP & API
+# -----------------------------------------------------------------------------
+requests==2.31.0
+urllib3==1.26.18  # Compatible with boto3 on Python 3.9
+certifi==2023.11.17
+
+# -----------------------------------------------------------------------------
+# TESTING
+# -----------------------------------------------------------------------------
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+httpx==0.26.0  # For testing FastAPI
+faker==22.0.0  # Generate fake data
+factory-boy==3.3.0  # Test fixtures
+
+# -----------------------------------------------------------------------------
+# CODE QUALITY
+# -----------------------------------------------------------------------------
+black==23.12.1  # Code formatting
+isort==5.13.2  # Import sorting
+flake8==7.0.0  # Linting
+mypy==1.8.0  # Type checking
+pylint==3.0.3  # Advanced linting
+
+# -----------------------------------------------------------------------------
+# DOCUMENTATION
+# -----------------------------------------------------------------------------
+mkdocs==1.5.3
+mkdocs-material==9.5.3
+mkdocstrings[python]==0.24.0
+
+# -----------------------------------------------------------------------------
+# DEVELOPMENT
+# -----------------------------------------------------------------------------
+ipython==8.18.1  # Compatible with Python 3.9
+jupyter==1.0.0
+watchdog==3.0.0  # File watching for auto-reload
+
+# -----------------------------------------------------------------------------
+# PERFORMANCE
+# -----------------------------------------------------------------------------
+orjson==3.9.12  # Fast JSON
+ujson==5.9.0  # Alternative JSON
+msgpack==1.0.7  # Binary serialization
+
+# -----------------------------------------------------------------------------
+# DEPLOYMENT
+# -----------------------------------------------------------------------------
+gunicorn==21.2.0
+supervisor==4.2.5
+
+# -----------------------------------------------------------------------------
+# ADVANCED MEMORY FEATURES (New)
+# -----------------------------------------------------------------------------
+# Note: Most dependencies for advanced features are already included above:
+# - torch: For RL policy networks, world models
+# - transformers & sentence-transformers: For embeddings and reranking
+# - langchain: For self-editing memory tools
+# - neo4j: For temporal knowledge graphs
+# - pymilvus: For vector storage
+# Additional utilities for memory consolidation, procedural memory, etc.

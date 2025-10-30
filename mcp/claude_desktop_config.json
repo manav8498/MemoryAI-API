@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "memory-ai": {
+      "command": "python",
+      "args": [
+        "/Users/manavpatel/Documents/API Memory/mcp/server.py"
+      ],
+      "env": {
+        "MEMORY_AI_API_KEY": "your_api_key_here",
+        "MEMORY_AI_BASE_URL": "http://localhost:8000"
+      }
+    }
+  }
+}

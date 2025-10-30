@@ -1,0 +1,121 @@
+Metadata-Version: 2.4
+Name: memory-ai-sdk
+Version: 1.0.0
+Summary: Simple 3-line integration for AI agents with memory - The most advanced memory API
+Home-page: https://github.com/memory-ai/memory-ai-python
+Author: AI Memory Team
+Author-email: Memory AI Team <support@memory-ai.com>
+Maintainer-email: Memory AI Team <support@memory-ai.com>
+License: Apache-2.0
+Project-URL: Homepage, https://github.com/yourusername/memory-ai
+Project-URL: Documentation, https://docs.memory-ai.com
+Project-URL: Repository, https://github.com/yourusername/memory-ai
+Project-URL: Bug Tracker, https://github.com/yourusername/memory-ai/issues
+Project-URL: Changelog, https://github.com/yourusername/memory-ai/releases
+Keywords: ai,memory,agents,llm,chatbot,assistant,ml,reinforcement-learning,knowledge-graph,vector-search,rag
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: requests>=2.31.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Dynamic: author
+Dynamic: home-page
+Dynamic: requires-python
+
+# Memory AI Python SDK
+
+[![PyPI version](https://img.shields.io/pypi/v/memory-ai.svg)](https://pypi.org/project/memory-ai/)
+[![Python versions](https://img.shields.io/pypi/pyversions/memory-ai.svg)](https://pypi.org/project/memory-ai/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+Official Python SDK for the AI Memory API - **the only memory API with Reinforcement Learning**.
+
+## 🚀 Features
+
+- ✅ **Complete API Coverage** - All 50+ endpoints supported
+- ✅ **Reinforcement Learning** - Train AI agents to optimize memory operations
+- ✅ **Temporal Knowledge Graphs** - Track facts over time with bi-temporal model
+- ✅ **Procedural Memory** - Store and execute learned skills
+- ✅ **Working Memory** - Short-term context buffer for conversations
+- ✅ **Memory Consolidation** - Automatic compression of episodic memories
+- ✅ **Async/Await** - Full async support with httpx
+- ✅ **Type Hints** - Complete type annotations
+- ✅ **Clean API** - Pythonic, intuitive interface
+
+## 📦 Installation
+
+```bash
+pip install memory-ai
+```
+
+## 🔥 Quick Start
+
+```python
+import asyncio
+from memory_ai import MemoryClient
+
+async def main():
+    # Initialize client
+    client = MemoryClient(api_key="mem_sk_your_api_key")
+
+    # Create a collection
+    collection = await client.collections.create(
+        name="My AI Agent",
+        description="Personal memory for my chatbot"
+    )
+
+    # Store a memory
+    memory = await client.memories.create(
+        collection_id=collection["id"],
+        content="User prefers dark mode and loves Python",
+        importance=0.9
+    )
+
+    # Search memories
+    results = await client.search(
+        query="What programming language does user like?",
+        collection_id=collection["id"],
+        limit=5
+    )
+
+    print(results)
+
+    # Close client
+    await client.close()
+
+asyncio.run(main())
+```
+
+## 📚 Complete Documentation
+
+Visit https://docs.memory-ai.com for full documentation.
+
+## 🔗 Links
+
+- **Documentation**: https://docs.memory-ai.com
+- **API Reference**: https://api.memory-ai.com/docs
+- **GitHub**: https://github.com/memory-ai/memory-ai
+- **Examples**: https://github.com/memory-ai/examples
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details
+
+---
+
+**Built with ❤️ by the Memory AI team**

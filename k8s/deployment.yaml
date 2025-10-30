@@ -1,0 +1,222 @@
+# =============================================================================
+# AI MEMORY API - KUBERNETES DEPLOYMENT
+# =============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: memory-api
+
+---
+# =============================================================================
+# CONFIGMAP
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: memory-api-config
+  namespace: memory-api
+data:
+  APP_NAME: "AI Memory API"
+  APP_ENV: "production"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  ENABLE_METRICS: "true"
+  ENABLE_TRACING: "true"
+
+---
+# =============================================================================
+# SECRET (create this separately with real values)
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: memory-api-secrets
+  namespace: memory-api
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "your-postgres-password"
+  NEO4J_PASSWORD: "your-neo4j-password"
+  GOOGLE_API_KEY: "your-google-api-key"
+  OPENAI_API_KEY: "your-openai-api-key"
+  ANTHROPIC_API_KEY: "your-anthropic-api-key"
+  SECRET_KEY: "your-secret-key"
+  JWT_SECRET_KEY: "your-jwt-secret"
+
+---
+# =============================================================================
+# DEPLOYMENT
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-api
+  namespace: memory-api
+  labels:
+    app: memory-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: memory-api
+  template:
+    metadata:
+      labels:
+        app: memory-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: api
+        image: your-registry/memory-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: APP_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: memory-api-config
+              key: APP_NAME
+        - name: APP_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: memory-api-config
+              key: APP_ENV
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: memory-api-secrets
+              key: POSTGRES_PASSWORD
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: memory-api-secrets
+              key: GOOGLE_API_KEY
+        - name: DATABASE_URL
+          value: "postgresql+asyncpg://memory_ai:$(POSTGRES_PASSWORD)@postgres:5432/memory_ai_db"
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"
+        - name: MILVUS_HOST
+          value: "milvus"
+        - name: NEO4J_URI
+          value: "bolt://neo4j:7687"
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: logs
+        emptyDir: {}
+
+---
+# =============================================================================
+# SERVICE
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: memory-api
+  namespace: memory-api
+  labels:
+    app: memory-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: metrics
+  selector:
+    app: memory-api
+
+---
+# =============================================================================
+# HORIZONTAL POD AUTOSCALER
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: memory-api-hpa
+  namespace: memory-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: memory-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# =============================================================================
+# INGRESS
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: memory-api-ingress
+  namespace: memory-api
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  tls:
+  - hosts:
+    - api.yourdomain.com
+    secretName: memory-api-tls
+  rules:
+  - host: api.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: memory-api
+            port:
+              number: 8000

@@ -1,0 +1,2 @@
+memory_ai
+memory_ai_sdk

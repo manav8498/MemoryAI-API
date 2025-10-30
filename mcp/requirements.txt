@@ -1,0 +1,14 @@
+# Memory AI MCP Server Requirements
+
+# MCP SDK (official Model Context Protocol SDK)
+mcp[cli]>=1.2.0
+
+# Memory AI SDK
+# NOTE: This will be available once published to PyPI
+# For now, install locally: pip install -e ../sdk/python
+# memory-ai-sdk>=1.0.0
+
+# HTTP client for API calls
+requests>=2.31.0
+
+# Note: asyncio, typing, and json are built-in Python modules (no installation needed)
