@@ -44,16 +44,27 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency for getting async database sessions.
 
+    Important: This dependency does NOT auto-commit. Endpoints must explicitly
+    call `await db.commit()` to persist changes. This provides fine-grained
+    transaction control and prevents unintended commits.
+
     Usage:
+        @app.post("/items")
+        async def create_item(item: Item, db: AsyncSession = Depends(get_db)):
+            db.add(item)
+            await db.commit()  # Explicit commit
+            await db.refresh(item)
+            return item
+
         @app.get("/items")
         async def get_items(db: AsyncSession = Depends(get_db)):
             result = await db.execute(select(Item))
-            return result.scalars().all()
+            return result.scalars().all()  # Read-only, no commit needed
     """
     async with AsyncSessionLocal() as session:
         try:
             yield session
-            await session.commit()
+            # DO NOT auto-commit - let endpoints control transactions
         except Exception:
             await session.rollback()
             raise
@@ -81,7 +92,7 @@ async def init_db() -> None:
     try:
         async with engine.begin() as conn:
             # Import all models here to ensure they're registered
-            from backend.models import user, memory, collection, api_key, procedural_memory, rl_trajectory
+            from backend.models import user, memory, collection, api_key, procedural_memory, rl_trajectory, user_profile
 
             # Create all tables
             await conn.run_sync(Base.metadata.create_all)

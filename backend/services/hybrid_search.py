@@ -142,8 +142,12 @@ class HybridSearchEngine:
             if not memory_ids:
                 return []
 
+            from sqlalchemy.orm import selectinload
+
             result = await self.db.execute(
-                select(Memory).where(Memory.id.in_(memory_ids))
+                select(Memory)
+                .where(Memory.id.in_(memory_ids))
+                .options(selectinload(Memory.extended_metadata))
             )
             memories = {m.id: m for m in result.scalars().all()}
 
@@ -152,16 +156,23 @@ class HybridSearchEngine:
             for vr in vector_results:
                 memory = memories.get(vr["memory_id"])
                 if memory:
+                    # Build metadata: combine base fields with custom metadata
+                    metadata = {
+                        "importance": memory.importance,
+                        "created_at": memory.created_at.isoformat(),
+                        "access_count": memory.access_count,
+                    }
+
+                    # Include custom metadata if available
+                    if memory.extended_metadata and memory.extended_metadata.custom_metadata:
+                        metadata.update(memory.extended_metadata.custom_metadata)
+
                     results.append(HybridSearchResult(
                         memory_id=memory.id,
                         content=memory.content,
                         score=vr["score"],
                         vector_score=vr["score"],
-                        metadata={
-                            "importance": memory.importance,
-                            "created_at": memory.created_at.isoformat(),
-                            "access_count": memory.access_count,
-                        },
+                        metadata=metadata,
                     ))
 
             return results
@@ -196,9 +207,13 @@ class HybridSearchEngine:
                 return []
 
             # Fetch memories
+            from sqlalchemy.orm import selectinload
+
             memory_ids = [r[0] for r in bm25_results]
             result = await self.db.execute(
-                select(Memory).where(Memory.id.in_(memory_ids))
+                select(Memory)
+                .where(Memory.id.in_(memory_ids))
+                .options(selectinload(Memory.extended_metadata))
             )
             memories = {m.id: m for m in result.scalars().all()}
 
@@ -210,15 +225,22 @@ class HybridSearchEngine:
                     # Normalize BM25 score (simple normalization)
                     normalized_score = min(score / 10.0, 1.0)
 
+                    # Build metadata: combine base fields with custom metadata
+                    metadata = {
+                        "importance": memory.importance,
+                        "created_at": memory.created_at.isoformat(),
+                    }
+
+                    # Include custom metadata if available
+                    if memory.extended_metadata and memory.extended_metadata.custom_metadata:
+                        metadata.update(memory.extended_metadata.custom_metadata)
+
                     results.append(HybridSearchResult(
                         memory_id=memory.id,
                         content=memory.content,
                         score=normalized_score,
                         bm25_score=normalized_score,
-                        metadata={
-                            "importance": memory.importance,
-                            "created_at": memory.created_at.isoformat(),
-                        },
+                        metadata=metadata,
                     ))
 
             return results

@@ -32,7 +32,11 @@ def create_access_token(
             minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
-    to_encode.update({"exp": expire, "iat": datetime.utcnow()})
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "type": "access",  # Mark as access token
+    })
 
     encoded_jwt = jwt.encode(
         to_encode,
@@ -87,6 +91,71 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
             settings.JWT_SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM],
         )
+        return payload
+
+    except JWTError as e:
+        logger.warning(f"JWT verification failed: {e}")
+        return None
+
+
+def verify_access_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Verify and decode a JWT access token with type validation.
+
+    This prevents refresh tokens from being used as access tokens,
+    which is a common security vulnerability.
+
+    Args:
+        token: JWT token string to verify
+
+    Returns:
+        Decoded token payload if valid access token, None otherwise
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+
+        # Validate token type
+        token_type = payload.get("type")
+        if token_type != "access":
+            logger.warning(f"Invalid token type: expected 'access', got '{token_type}'")
+            return None
+
+        return payload
+
+    except JWTError as e:
+        logger.warning(f"JWT verification failed: {e}")
+        return None
+
+
+def verify_refresh_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Verify and decode a JWT refresh token with type validation.
+
+    This ensures only refresh tokens can be used to obtain new access tokens.
+
+    Args:
+        token: JWT token string to verify
+
+    Returns:
+        Decoded token payload if valid refresh token, None otherwise
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+
+        # Validate token type
+        token_type = payload.get("type")
+        if token_type != "refresh":
+            logger.warning(f"Invalid token type: expected 'refresh', got '{token_type}'")
+            return None
+
         return payload
 
     except JWTError as e:

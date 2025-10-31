@@ -237,16 +237,16 @@ async def auto_save_conversation(request: Request, call_next):
             logger.info(f"Auth header: {auth[:50] if auth else 'None'}...")
             if auth.startswith("Bearer "):
                 try:
-                    from backend.core.auth import verify_token
+                    from backend.core.auth.jwt import verify_access_token
                     token = auth.split(" ")[1]
-                    payload = verify_token(token)
+                    payload = verify_access_token(token)
                     if payload:
                         user_id = payload.get("sub")
                         logger.info(f"Got user_id from token: {user_id}")
                     else:
-                        logger.warning("Token verification returned None")
+                        logger.warning("Access token verification returned None")
                 except Exception as e:
-                    logger.error(f"Failed to verify token: {e}", exc_info=True)
+                    logger.error(f"Failed to verify access token: {e}", exc_info=True)
 
         if user_id:
             logger.info(f"Saving conversation context for user {user_id}")
@@ -269,7 +269,7 @@ async def _save_conversation_context(user_id: str, path: str, method: str, reque
         from backend.core.database import AsyncSessionLocal
         from backend.models.collection import Collection
         from backend.models.memory import Memory, MemoryMetadata
-        from sqlalchemy import select
+        from sqlalchemy import select, update
 
         COLLECTION_NAME = "Conversation History"
 
@@ -320,7 +320,7 @@ async def _save_conversation_context(user_id: str, path: str, method: str, reque
                     memory_id=memory.id,
                     custom_metadata={
                         "auto_saved": True,
-                        "timestamp": datetime.now().isoformat(),
+                        "timestamp": datetime.utcnow().isoformat(),
                         "source": "automatic",
                         "endpoint": path,
                         "method": method
@@ -330,8 +330,12 @@ async def _save_conversation_context(user_id: str, path: str, method: str, reque
                 db.add(memory)
                 db.add(metadata)
 
-                # Update collection memory count
-                collection.memory_count += 1
+                # Update collection memory count atomically to prevent race conditions
+                await db.execute(
+                    update(Collection)
+                    .where(Collection.id == collection.id)
+                    .values(memory_count=Collection.memory_count + 1)
+                )
 
                 await db.commit()
                 logger.info(f"Auto-saved conversation context: {summary[:100]}...")

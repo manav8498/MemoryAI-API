@@ -4,9 +4,50 @@ Knowledge graph (Neo4j) integration for entity relationships.
 from typing import List, Dict, Any, Optional
 from neo4j import AsyncGraphDatabase, AsyncDriver
 from neo4j.exceptions import ServiceUnavailable
+import re
 
 from backend.core.config import settings
 from backend.core.logging_config import logger
+
+
+def sanitize_relationship_type(relationship_type: str) -> str:
+    """
+    Sanitize relationship type for Neo4j Cypher queries.
+
+    Neo4j relationship types must follow naming conventions:
+    - Only uppercase letters, numbers, and underscores
+    - Cannot start with a number
+    - Used in MERGE/CREATE statements where parameterization isn't supported
+
+    Args:
+        relationship_type: The relationship type to sanitize
+
+    Returns:
+        Sanitized relationship type
+
+    Raises:
+        ValueError: If relationship type contains invalid characters
+    """
+    if not isinstance(relationship_type, str):
+        raise ValueError(f"Expected string, got {type(relationship_type)}")
+
+    if not relationship_type:
+        raise ValueError("Relationship type cannot be empty")
+
+    # Neo4j relationship types should be uppercase with underscores
+    # Allow alphanumeric and underscores only, must not start with a number
+    if not re.match(r'^[A-Z_][A-Z0-9_]*$', relationship_type):
+        raise ValueError(
+            f"Invalid relationship type: {relationship_type}. "
+            "Must contain only uppercase letters, numbers, and underscores, "
+            "and cannot start with a number."
+        )
+
+    # Additional length check to prevent extremely long relationship types
+    if len(relationship_type) > 100:
+        raise ValueError("Relationship type too long (max 100 characters)")
+
+    return relationship_type
 
 
 # Global Neo4j driver
@@ -15,7 +56,7 @@ _neo4j_driver: Optional[AsyncDriver] = None
 
 async def init_knowledge_graph() -> None:
     """
-    Initialize connection to Neo4j knowledge graph.
+    Initialize connection to Neo4j knowledge graph with proper connection pooling.
     Called during application startup.
     """
     global _neo4j_driver
@@ -24,12 +65,18 @@ async def init_knowledge_graph() -> None:
         _neo4j_driver = AsyncGraphDatabase.driver(
             settings.NEO4J_URI,
             auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD),
+            # Connection pool configuration to prevent connection exhaustion
+            max_connection_pool_size=50,  # Maximum connections in pool
+            connection_acquisition_timeout=60.0,  # Timeout waiting for connection (seconds)
+            max_connection_lifetime=3600,  # Close connections after 1 hour
+            keep_alive=True,  # Send keep-alive messages
+            connection_timeout=30.0,  # Timeout for establishing connection
         )
 
         # Verify connection
         await _neo4j_driver.verify_connectivity()
 
-        logger.info("Connected to Neo4j knowledge graph")
+        logger.info("Connected to Neo4j knowledge graph with connection pooling")
 
         # Create indexes
         await _create_indexes()
@@ -201,6 +248,10 @@ class KnowledgeGraphClient:
             True if successful
         """
         try:
+            # Sanitize relationship type to prevent Cypher injection
+            # Cannot use parameterization for relationship types in MERGE statements
+            relationship_type = sanitize_relationship_type(relationship_type)
+
             async with self.driver.session() as session:
                 query = f"""
                 MATCH (source:Entity {{name: $source_entity}})
@@ -296,8 +347,8 @@ class KnowledgeGraphClient:
         """
         try:
             async with self.driver.session() as session:
-                # Build query
-                type_filter = f"AND e.type = '{entity_type}'" if entity_type else ""
+                # Build query with parameterized entity_type
+                type_filter = "AND e.type = $entity_type" if entity_type else ""
 
                 cypher_query = f"""
                 MATCH (m:Memory)-[:MENTIONS]->(e:Entity)
@@ -311,12 +362,16 @@ class KnowledgeGraphClient:
                 LIMIT $limit
                 """
 
-                result = await session.run(
-                    cypher_query,
-                    user_id=user_id,
-                    query=query,
-                    limit=limit,
-                )
+                # Build parameters dict
+                params = {
+                    "user_id": user_id,
+                    "query": query,
+                    "limit": limit,
+                }
+                if entity_type:
+                    params["entity_type"] = entity_type
+
+                result = await session.run(cypher_query, **params)
 
                 entities = []
                 async for record in result:

@@ -15,7 +15,7 @@ class APIKey(Base):
     Attributes:
         id: Unique key identifier
         user_id: Associated user ID
-        key_hash: SHA256 hash of the API key
+        key_hash: Bcrypt hash of the API key (60 chars)
         name: Human-readable key name
         prefix: First 7 characters of key (for identification)
         is_active: Whether key is active
@@ -30,7 +30,7 @@ class APIKey(Base):
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # Key data
-    key_hash = Column(String(64), unique=True, nullable=False, index=True)
+    key_hash = Column(String(72), unique=True, nullable=False, index=True)  # Bcrypt hashes are 60 chars
     name = Column(String(255), nullable=False)
     prefix = Column(String(20), nullable=False)  # e.g., "mem_sk_abc1234567"
 

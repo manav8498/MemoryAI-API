@@ -5,10 +5,10 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from backend.core.database import get_db
-from backend.core.auth.jwt import verify_token
+from backend.core.auth.jwt import verify_access_token
 from backend.core.auth.api_key import verify_api_key
 from backend.models.user import User
 from backend.models.api_key import APIKey
@@ -38,8 +38,8 @@ async def get_current_user_from_jwt(
 
     token = credentials.credentials
 
-    # Verify JWT token
-    payload = verify_token(token)
+    # Verify JWT access token (validates token type to prevent refresh token misuse)
+    payload = verify_access_token(token)
     if not payload:
         return None
 
@@ -96,9 +96,18 @@ async def get_current_user_from_api_key(
     if not matched_key:
         return None
 
-    # Update last used timestamp
+    # Validate API key expiration
     from datetime import datetime
-    matched_key.last_used_at = datetime.utcnow()
+    if matched_key.expires_at and matched_key.expires_at < datetime.utcnow():
+        logger.warning(f"Expired API key used: {matched_key.prefix}... (expired at {matched_key.expires_at})")
+        return None
+
+    # Update last used timestamp atomically to prevent race conditions
+    await db.execute(
+        update(APIKey)
+        .where(APIKey.id == matched_key.id)
+        .values(last_used_at=datetime.utcnow())
+    )
     await db.commit()
 
     # Get associated user

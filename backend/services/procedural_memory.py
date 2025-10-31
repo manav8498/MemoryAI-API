@@ -9,7 +9,7 @@ import uuid
 import time
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func
+from sqlalchemy import select, and_, or_, func, update
 
 from backend.core.logging_config import logger
 from backend.models.procedural_memory import Procedure, ProcedureExecution, ProcedureTemplate
@@ -230,11 +230,19 @@ class ProceduralMemoryManager:
 
             self.db.add(execution)
 
-            # Update procedure stats
-            procedure.usage_count += 1
-            procedure.last_used_at = datetime.utcnow()
+            # Update procedure stats atomically to prevent race conditions
+            update_values = {
+                "usage_count": Procedure.usage_count + 1,
+                "last_used_at": datetime.utcnow()
+            }
             if success:
-                procedure.last_success_at = datetime.utcnow()
+                update_values["last_success_at"] = datetime.utcnow()
+
+            await self.db.execute(
+                update(Procedure)
+                .where(Procedure.id == procedure_id)
+                .values(**update_values)
+            )
 
             await self.db.commit()
 

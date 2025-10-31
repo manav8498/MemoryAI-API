@@ -7,6 +7,13 @@ from backend.models.collection import Collection
 from backend.models.memory import Memory, MemoryMetadata
 from backend.models.procedural_memory import Procedure, ProcedureExecution, ProcedureTemplate
 from backend.models.rl_trajectory import Trajectory, TrajectoryStep
+from backend.models.user_profile import (
+    UserProfileFact,
+    ProfileOperation,
+    ProfileSnapshot,
+    ProfileType,
+    ProfileCategory,
+)
 
 
 __all__ = [
@@ -20,4 +27,9 @@ __all__ = [
     "ProcedureTemplate",
     "Trajectory",
     "TrajectoryStep",
+    "UserProfileFact",
+    "ProfileOperation",
+    "ProfileSnapshot",
+    "ProfileType",
+    "ProfileCategory",
 ]

@@ -3,7 +3,7 @@ API v1 routes.
 """
 from fastapi import APIRouter
 
-from backend.api.v1.endpoints import auth, users, collections, memories, search
+from backend.api.v1.endpoints import auth, users, collections, memories, search, profile
 from backend.api.routes import (
     rl,
     procedural,
@@ -24,6 +24,7 @@ api_router.include_router(users.router, prefix="/users", tags=["Users"])
 api_router.include_router(collections.router, prefix="/collections", tags=["Collections"])
 api_router.include_router(memories.router, prefix="/memories", tags=["Memories"])
 api_router.include_router(search.router, prefix="/search", tags=["Search"])
+api_router.include_router(profile.router, prefix="/profile", tags=["User Profiles"])
 
 # Include new advanced feature endpoints
 api_router.include_router(rl.router, tags=["RL Training"])

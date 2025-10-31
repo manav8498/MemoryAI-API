@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: memory-ai-poe-bot
+    env: python
+    buildCommand: pip install -r requirements_poe.txt
+    startCommand: python poe_bot.py
+    envVars:
+      - key: MEMORY_AI_API_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMWJjNzVlOS0yMzdkLTRiNWMtYWZmOC03ZGFhMWUwN2M1YTYiLCJleHAiOjE3NjQzMTAzMTYsImlhdCI6MTc2MTcxODMxNn0.wixiNZ55CtTUScRNpNg86FYmA8WF9LNH7FrMP1dJMno
+      - key: MEMORY_AI_BASE_URL
+        value: http://your-api-url:8000
+      - key: COLLECTION_ID
+        value: 32ab4192-241a-48fc-9051-6829246b0ca7

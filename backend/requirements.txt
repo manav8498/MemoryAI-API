@@ -7,15 +7,15 @@
 # -----------------------------------------------------------------------------
 fastapi[all]==0.109.0
 uvicorn[standard]==0.27.0
-pydantic==2.5.3
-pydantic-settings==2.1.0
+pydantic==2.11.7  # Updated for realtime 2.7.0 compatibility (requires >=2.11.7, <3.0.0)
+pydantic-settings==2.6.1  # Updated for pydantic 2.11.7 compatibility
 python-multipart==0.0.6
 
 # -----------------------------------------------------------------------------
 # ASYNC & CONCURRENCY
 # -----------------------------------------------------------------------------
 aiohttp==3.9.1
-httpx==0.26.0
+httpx==0.28.1  # Updated for google-genai compatibility
 aiokafka==0.10.0
 
 # -----------------------------------------------------------------------------
@@ -32,7 +32,7 @@ redis==5.0.1
 aioredis==2.0.1
 
 # Milvus Vector DB
-pymilvus==2.3.5
+pymilvus==2.3.5  # Downgraded for protobuf <5.0.0 compatibility with google-generativeai
 
 # Neo4j Graph DB
 neo4j==5.16.0
@@ -47,7 +47,7 @@ sentence-transformers==2.3.1
 huggingface-hub==0.20.2
 
 # OpenAI
-openai==1.10.0
+openai==1.99.9  # Updated for langchain-openai compatibility
 
 # Google Gemini
 google-generativeai==0.3.2
@@ -55,10 +55,12 @@ google-generativeai==0.3.2
 # Anthropic Claude
 anthropic==0.8.1
 
-# LangChain Integration
-langchain==0.1.4
-langchain-core==0.1.16
-langchain-community==0.0.16
+# LangChain Integration (Python 3.11 compatible - latest versions)
+langchain==0.3.13  # Latest stable version for Python 3.11
+langchain-core==0.3.28  # Latest stable version
+langchain-community==0.3.13  # Latest stable version
+langchain-openai==0.2.14  # Latest stable version
+tiktoken==0.8.0  # Updated for compatibility
 
 # Embeddings
 faiss-cpu==1.7.4  # For local similarity search
@@ -108,11 +110,13 @@ python-json-logger==2.0.7
 prometheus-client==0.19.0
 prometheus-fastapi-instrumentator==6.1.0
 
-# Tracing
-opentelemetry-api==1.22.0
-opentelemetry-sdk==1.22.0
+# Tracing (using compatible versions)
+opentelemetry-api==1.22.0  # Compatible with instrumentation 0.43b0
+opentelemetry-sdk==1.22.0  # Compatible with instrumentation 0.43b0
 opentelemetry-instrumentation-fastapi==0.43b0
 opentelemetry-exporter-jaeger==1.21.0
+grpcio==1.58.0  # Compatible with pymilvus 2.3.5 (requires >=1.49.1, <=1.58.0)
+protobuf==4.25.8  # Compatible with google-generativeai (<5.0.0) and pymilvus 2.3.5
 
 # Error Tracking
 sentry-sdk[fastapi]==1.39.2
@@ -124,22 +128,24 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 cryptography==42.0.0
+pyjwt==2.10.1  # Updated for supabase-auth compatibility
 
 # -----------------------------------------------------------------------------
 # VALIDATION & SERIALIZATION
 # -----------------------------------------------------------------------------
-pydantic==2.5.3
+# pydantic is already defined in WEB FRAMEWORK section (2.9.2)
 email-validator==2.1.0
 phonenumbers==8.13.27
 
 # -----------------------------------------------------------------------------
 # UTILITIES
 # -----------------------------------------------------------------------------
-python-dotenv==1.0.0
+python-dotenv==1.0.1  # Updated for pymilvus 2.6.2 compatibility (requires >=1.0.1, <2.0.0)
 python-dateutil==2.8.2
 pytz==2023.3.post1
 tenacity==8.2.3  # Retry logic
 cachetools==5.3.2  # Caching utilities
+packaging==24.0  # Updated for twine compatibility
 
 # -----------------------------------------------------------------------------
 # HTTP & API
@@ -155,7 +161,7 @@ pytest==7.4.4
 pytest-asyncio==0.23.3
 pytest-cov==4.1.0
 pytest-mock==3.12.0
-httpx==0.26.0  # For testing FastAPI
+httpx==0.28.1  # For testing FastAPI (updated for compatibility)
 faker==22.0.0  # Generate fake data
 factory-boy==3.3.0  # Test fixtures
 
@@ -185,7 +191,7 @@ watchdog==3.0.0  # File watching for auto-reload
 # -----------------------------------------------------------------------------
 # PERFORMANCE
 # -----------------------------------------------------------------------------
-orjson==3.9.12  # Fast JSON
+orjson==3.10.14  # Fast JSON - Updated for langsmith compatibility (requires >=3.9.14, <4.0.0)
 ujson==5.9.0  # Alternative JSON
 msgpack==1.0.7  # Binary serialization
 

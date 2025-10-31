@@ -15,6 +15,9 @@ from backend.core.logging_config import logger
 from backend.services.hybrid_search import search_memories as hybrid_search
 from backend.reasoning.engine import get_reasoning_engine
 from backend.rl.trajectory_logger import get_trajectory_logger
+from backend.core.cache import get_cache_manager
+import hashlib
+import json
 
 
 router = APIRouter()
@@ -81,6 +84,51 @@ async def search_memories_endpoint(
         f"query='{search_request.query}', type={search_request.search_type}"
     )
 
+    # Generate cache key from search parameters
+    cache_key_data = {
+        "user_id": str(current_user.id),
+        "query": search_request.query,
+        "collection_id": search_request.collection_id,
+        "limit": search_request.limit,
+        "search_type": search_request.search_type,
+        "filters": search_request.filters,
+    }
+    cache_key_str = json.dumps(cache_key_data, sort_keys=True)
+    cache_key_hash = hashlib.sha256(cache_key_str.encode()).hexdigest()
+    cache_key = f"search:{cache_key_hash}"
+
+    # Try to get from cache
+    cache_manager = await get_cache_manager()
+    cached_results = await cache_manager.get(cache_key)
+
+    if cached_results is not None:
+        logger.info(f"Cache HIT for query: '{search_request.query}' (key: {cache_key})")
+        processing_time = (time.time() - start_time) * 1000
+
+        # Convert cached results to SearchResult objects
+        results = [
+            SearchResult(
+                memory_id=r["memory_id"],
+                content=r["content"],
+                score=r["score"],
+                metadata=r.get("metadata", {}),
+                created_at=datetime.fromisoformat(r["created_at"])
+                if isinstance(r.get("created_at"), str)
+                else r.get("created_at", datetime.utcnow()),
+            )
+            for r in cached_results
+        ]
+
+        return SearchResponse(
+            query=search_request.query,
+            results=results,
+            total=len(results),
+            search_type=search_request.search_type,
+            processing_time_ms=processing_time,
+        )
+
+    logger.info(f"Cache MISS for query: '{search_request.query}' (key: {cache_key})")
+
     # Start RL trajectory logging
     trajectory_logger = get_trajectory_logger()
     trajectory_id = str(uuid.uuid4())
@@ -121,6 +169,20 @@ async def search_memories_endpoint(
         )
         for r in results_dicts
     ]
+
+    # Store results in cache (TTL: 5 minutes = 300 seconds)
+    cache_data = [
+        {
+            "memory_id": r.memory_id,
+            "content": r.content,
+            "score": r.score,
+            "metadata": r.metadata,
+            "created_at": r.created_at.isoformat(),
+        }
+        for r in results
+    ]
+    await cache_manager.set(cache_key, cache_data, ttl=300)
+    logger.info(f"Stored {len(results)} results in cache with key: {cache_key}")
 
     processing_time = (time.time() - start_time) * 1000
 

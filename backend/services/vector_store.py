@@ -11,6 +11,7 @@ from pymilvus import (
     utility,
 )
 import numpy as np
+import re
 
 from backend.core.config import settings
 from backend.core.logging_config import logger
@@ -18,6 +19,36 @@ from backend.core.logging_config import logger
 
 # Global Milvus connection status
 _milvus_connected = False
+
+
+def sanitize_milvus_value(value: str, value_type: str = "id") -> str:
+    """
+    Sanitize values for Milvus query expressions to prevent injection.
+
+    Args:
+        value: The value to sanitize
+        value_type: Type of value ("id" for UUIDs, "string" for general strings)
+
+    Returns:
+        Sanitized value safe for use in expressions
+
+    Raises:
+        ValueError: If value contains unsafe characters
+    """
+    if not isinstance(value, str):
+        raise ValueError(f"Expected string, got {type(value)}")
+
+    if value_type == "id":
+        # UUIDs should only contain alphanumeric characters and hyphens
+        if not re.match(r'^[a-zA-Z0-9-]+$', value):
+            raise ValueError(f"Invalid ID format: {value}")
+    elif value_type == "string":
+        # Escape special characters for string values
+        # Disallow quotes and backslashes to prevent injection
+        if any(char in value for char in ['"', "'", '\\', '\n', '\r']):
+            raise ValueError(f"Invalid characters in string value")
+
+    return value
 
 
 async def init_vector_store() -> None:
@@ -124,6 +155,13 @@ class VectorStoreClient:
     def __init__(self):
         self.collection_name = f"{settings.MILVUS_COLLECTION_PREFIX}_memories"
         self.collection = Collection(self.collection_name)
+        # Load collection into memory once during initialization
+        # This prevents expensive load() calls on every search
+        try:
+            self.collection.load()
+            logger.debug(f"Loaded collection {self.collection_name} into memory")
+        except Exception as e:
+            logger.warning(f"Could not pre-load collection: {e}")
 
     async def insert_memory(
         self,
@@ -190,11 +228,18 @@ class VectorStoreClient:
             List of search results with memory_id, score, and metadata
         """
         try:
-            # Build search expression
+            # Build search expression with sanitized values
+            user_id = sanitize_milvus_value(user_id, "id")
             expr = f'user_id == "{user_id}"'
+
             if collection_id:
+                collection_id = sanitize_milvus_value(collection_id, "id")
                 expr += f' && collection_id == "{collection_id}"'
+
             if importance_threshold > 0:
+                # Numeric values are safe, but validate it's actually a number
+                if not isinstance(importance_threshold, (int, float)):
+                    raise ValueError("importance_threshold must be numeric")
                 expr += f" && importance >= {importance_threshold}"
 
             # Search parameters
@@ -203,8 +248,7 @@ class VectorStoreClient:
                 "params": {"nprobe": 10},
             }
 
-            # Load collection into memory
-            self.collection.load()
+            # Collection is already loaded in __init__, no need to load again
 
             # Perform search
             results = self.collection.search(
@@ -247,6 +291,7 @@ class VectorStoreClient:
             True if successful
         """
         try:
+            memory_id = sanitize_milvus_value(memory_id, "id")
             expr = f'memory_id == "{memory_id}"'
             self.collection.delete(expr)
             self.collection.flush()
@@ -269,6 +314,7 @@ class VectorStoreClient:
             True if successful
         """
         try:
+            collection_id = sanitize_milvus_value(collection_id, "id")
             expr = f'collection_id == "{collection_id}"'
             self.collection.delete(expr)
             self.collection.flush()
@@ -292,12 +338,14 @@ class VectorStoreClient:
             Number of memories
         """
         try:
+            user_id = sanitize_milvus_value(user_id, "id")
             expr = f'user_id == "{user_id}"'
+
             if collection_id:
+                collection_id = sanitize_milvus_value(collection_id, "id")
                 expr += f' && collection_id == "{collection_id}"'
 
-            # Query for count
-            self.collection.load()
+            # Query for count (collection already loaded in __init__)
             count = self.collection.query(expr=expr, output_fields=["count(*)"])
 
             return count[0]["count(*)"] if count else 0

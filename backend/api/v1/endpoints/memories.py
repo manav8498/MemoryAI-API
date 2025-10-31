@@ -6,7 +6,7 @@ import hashlib
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
@@ -123,8 +123,12 @@ async def create_memory(
     db.add(memory)
     db.add(metadata)
 
-    # Update collection memory count
-    collection.memory_count += 1
+    # Update collection memory count atomically to prevent race conditions
+    await db.execute(
+        update(Collection)
+        .where(Collection.id == collection.id)
+        .values(memory_count=Collection.memory_count + 1)
+    )
 
     await db.commit()
     await db.refresh(memory)
@@ -134,10 +138,23 @@ async def create_memory(
     # Trigger async processing pipeline in background
     try:
         from backend.services.pipeline.memory_ingestion import process_memory_async
+        import asyncio
+
         # Process memory: embeddings → Milvus, entities → Neo4j
         # Note: This runs in background, errors logged but don't block response
-        import asyncio
-        asyncio.create_task(process_memory_async(memory.id, str(memory.content)))
+        task = asyncio.create_task(process_memory_async(memory.id, str(memory.content)))
+
+        # Add exception handler to catch uncaught exceptions in background task
+        def handle_task_exception(task):
+            try:
+                task.result()  # This will raise if the task had an exception
+            except Exception as e:
+                logger.error(
+                    f"Background task failed for memory {memory.id}: {e}",
+                    exc_info=True
+                )
+
+        task.add_done_callback(handle_task_exception)
     except Exception as e:
         logger.warning(f"Failed to trigger async processing: {e}")
         # Continue - memory still created in DB

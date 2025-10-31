@@ -90,10 +90,22 @@ class MemoryIngestionPipeline:
                 collection_id=collection_id,
             )
 
+            # Step 5: Extract user profile facts (NEW - async, don't block)
+            profile_task = self._extract_profile_facts(
+                memory=memory,
+                user_id=user_id,
+            )
+
             # Wait for entity extraction
             entities_success = await entities_task
 
-            # Step 5: Update metadata with processing info
+            # Wait for profile extraction (async, won't block main flow)
+            try:
+                await profile_task
+            except Exception as e:
+                logger.warning(f"Profile extraction failed (non-critical): {e}")
+
+            # Step 6: Update metadata with processing info
             await self._update_processing_metadata(
                 metadata,
                 embedding_dimension=len(embedding),
@@ -321,6 +333,43 @@ class MemoryIngestionPipeline:
             await self.db.commit()
         except Exception as e:
             logger.error(f"Failed to update processing metadata: {e}")
+
+    async def _extract_profile_facts(
+        self,
+        memory: Memory,
+        user_id: str,
+    ) -> bool:
+        """
+        Extract user profile facts from memory using LLM.
+
+        This is the NEW automatic profile extraction feature
+        similar to SuperMemory's user profiling.
+
+        Args:
+            memory: Memory object
+            user_id: User ID
+
+        Returns:
+            True if successful
+        """
+        try:
+            from backend.services.profile_extractor import get_profile_extractor
+
+            # Get profile extractor
+            extractor = get_profile_extractor(db=self.db)
+
+            # Extract facts
+            facts = await extractor.extract_facts_from_memory(
+                memory=memory,
+                user_id=user_id,
+            )
+
+            logger.info(f"Extracted {len(facts)} profile facts from memory {memory.id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Profile fact extraction failed: {e}")
+            return False
 
     async def delete_memory(
         self,

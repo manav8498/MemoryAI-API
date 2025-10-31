@@ -1,9 +1,9 @@
 """
 API Key generation and verification utilities.
 """
-import hashlib
 import secrets
 from typing import Tuple
+import bcrypt
 
 from backend.core.config import settings
 
@@ -35,27 +35,44 @@ def generate_api_key() -> Tuple[str, str, str]:
 
 def hash_api_key(api_key: str) -> str:
     """
-    Hash an API key using SHA256.
+    Hash an API key using bcrypt.
+
+    Bcrypt is preferred over SHA256 for API keys because:
+    - Built-in salt (prevents rainbow table attacks)
+    - Computationally expensive (slows brute-force attacks)
+    - Adaptive work factor (can increase security over time)
 
     Args:
         api_key: Plain text API key
 
     Returns:
-        SHA256 hash of the key
+        Bcrypt hash of the key (stored as UTF-8 decoded string)
     """
-    return hashlib.sha256(api_key.encode()).hexdigest()
+    # Generate salt and hash the API key
+    salt = bcrypt.gensalt(rounds=12)  # 12 rounds = good balance of security/performance
+    hashed = bcrypt.hashpw(api_key.encode('utf-8'), salt)
+
+    # Return as string for database storage
+    return hashed.decode('utf-8')
 
 
 def verify_api_key(provided_key: str, stored_hash: str) -> bool:
     """
-    Verify an API key against its stored hash.
+    Verify an API key against its stored bcrypt hash.
 
     Args:
         provided_key: API key provided by user
-        stored_hash: SHA256 hash stored in database
+        stored_hash: Bcrypt hash stored in database
 
     Returns:
         True if key matches, False otherwise
     """
-    computed_hash = hash_api_key(provided_key)
-    return secrets.compare_digest(computed_hash, stored_hash)
+    try:
+        # bcrypt.checkpw requires bytes for both arguments
+        return bcrypt.checkpw(
+            provided_key.encode('utf-8'),
+            stored_hash.encode('utf-8')
+        )
+    except Exception:
+        # If hashing fails (e.g., invalid hash format), return False
+        return False

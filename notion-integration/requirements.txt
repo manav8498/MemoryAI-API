@@ -1,0 +1,13 @@
+# Notion Memory AI Integration Requirements
+
+# Notion SDK
+notion-client==2.2.1
+
+# HTTP Client
+httpx==0.27.0
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Optional: For advanced features
+aiofiles==23.2.1

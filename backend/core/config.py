@@ -4,8 +4,9 @@ Loads settings from environment variables using Pydantic Settings.
 """
 from typing import List, Optional
 from pydantic_settings import BaseSettings
-from pydantic import Field, validator
+from pydantic import Field, validator, model_validator
 import secrets
+import os
 
 
 class Settings(BaseSettings):
@@ -34,6 +35,87 @@ class Settings(BaseSettings):
         if v == "*":
             return ["*"]
         return [origin.strip() for origin in v.split(",")]
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        """
+        Validate that secret keys are explicitly set in production environments.
+
+        In production, SECRET_KEY and JWT_SECRET_KEY must be set via environment
+        variables to prevent invalidating sessions/tokens on server restart.
+        """
+        if self.APP_ENV in ("production", "staging"):
+            # Check if SECRET_KEY is set via environment variable
+            if "SECRET_KEY" not in os.environ:
+                raise ValueError(
+                    "SECRET_KEY must be explicitly set via environment variable in production. "
+                    "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+                )
+
+            # Check if JWT_SECRET_KEY is set via environment variable
+            if "JWT_SECRET_KEY" not in os.environ:
+                raise ValueError(
+                    "JWT_SECRET_KEY must be explicitly set via environment variable in production. "
+                    "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+                )
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_production_cors(self) -> "Settings":
+        """
+        Validate that CORS is properly configured in production.
+
+        Wildcard CORS origins (*) allow any website to make requests,
+        which is a security risk in production environments.
+        """
+        if self.APP_ENV in ("production", "staging"):
+            # ALLOWED_ORIGINS will be parsed by parse_cors_origins validator
+            # Check if it's ["*"] after parsing
+            if isinstance(self.ALLOWED_ORIGINS, list) and "*" in self.ALLOWED_ORIGINS:
+                raise ValueError(
+                    "ALLOWED_ORIGINS cannot be '*' in production. "
+                    "Set ALLOWED_ORIGINS to a comma-separated list of specific domains: "
+                    "e.g., ALLOWED_ORIGINS='https://app.example.com,https://dashboard.example.com'"
+                )
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_production_credentials(self) -> "Settings":
+        """
+        Validate that sensitive credentials are set via environment variables in production.
+
+        Hardcoded credentials in code are a security vulnerability. All database
+        passwords, API keys, and secrets must be explicitly provided via environment
+        variables in production/staging environments.
+        """
+        if self.APP_ENV in ("production", "staging"):
+            # Check for default/test credentials that indicate missing configuration
+            required_env_vars = {
+                "POSTGRES_PASSWORD": ("memory_ai_password", "Database password"),
+                "MILVUS_PASSWORD": ("Milvus", "Milvus password"),
+                "NEO4J_PASSWORD": ("neo4j_password", "Neo4j password"),
+                "S3_ACCESS_KEY": ("test_access_key", "S3 access key"),
+                "S3_SECRET_KEY": ("test_secret_key", "S3 secret key"),
+            }
+
+            missing_configs = []
+            for env_var, (default_value, description) in required_env_vars.items():
+                current_value = os.environ.get(env_var)
+
+                # Check if the env var is not set or using default value
+                if not current_value or current_value == default_value:
+                    missing_configs.append(f"{env_var} ({description})")
+
+            if missing_configs:
+                raise ValueError(
+                    f"The following credentials must be explicitly set via environment variables "
+                    f"in production (not using default values):\n  - " +
+                    "\n  - ".join(missing_configs)
+                )
+
+        return self
 
     # Database - PostgreSQL
     POSTGRES_HOST: str = "localhost"
@@ -124,7 +206,7 @@ class Settings(BaseSettings):
     DEFAULT_SEARCH_LIMIT: int = 10
     MAX_SEARCH_LIMIT: int = 100
     HYBRID_SEARCH_ALPHA: float = 0.5
-    ENABLE_CROSS_ENCODER_RERANKING: bool = True
+    ENABLE_CROSS_ENCODER_RERANKING: bool = False  # Disabled for performance - adds 1-2s latency
     RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
     ENABLE_MEMORY_DECAY: bool = True
@@ -178,8 +260,8 @@ class Settings(BaseSettings):
     # Performance
     ENABLE_RESPONSE_CACHING: bool = True
     CACHE_TTL_SECONDS: int = 300
-    CONNECTION_POOL_SIZE: int = 20
-    MAX_OVERFLOW: int = 10
+    CONNECTION_POOL_SIZE: int = 50  # Increased from 20 for better concurrency
+    MAX_OVERFLOW: int = 50  # Increased from 10 to support 100 total connections
 
     # Development
     ENABLE_API_DOCS: bool = True
